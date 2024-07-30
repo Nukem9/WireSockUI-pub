@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
+using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using WireSockUI.Extensions;
@@ -13,7 +15,7 @@ namespace WireSockUI
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static int Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -27,12 +29,42 @@ namespace WireSockUI
                     MessageBoxIcon.Information);
                 OpenBrowser(Resources.AppWireSockURL);
 
-                Environment.Exit(1);
+                return 1;
             }
 
             CheckVersion();
 
+            // Don't try to elevate when running under debugger
+            if (!Debugger.IsAttached && !IsCurrentProcessElevated() && !Settings.Default.DisableAutoAdmin)
+            {
+                try
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        UseShellExecute = true,
+                        WorkingDirectory = Environment.CurrentDirectory,
+                        FileName = Application.ExecutablePath,
+                        Verb = "runas"
+                    };
+                    Process.Start(startInfo);
+                    return 1;
+                }
+                catch
+                {
+                    // If the user refused the elevation, or an error occurred
+                    // MessageBox.Show("Unable to run as administrator. Continuing as normal user.");
+                }
+            }
+
+            if (IsApplicationAlreadyRunning())
+            {
+                MessageBox.Show(Resources.AlreadyRunningMessage, Resources.AlreadyRunningTitle, MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return 1;
+            }
+
             Application.Run(new FrmMain());
+            return 0;
         }
 
         private static void OpenBrowser(string url)
@@ -115,6 +147,41 @@ namespace WireSockUI
                 Environment.SetEnvironmentVariable("PATH", environmentPath);
 
                 return File.Exists(wiresockLocation);
+            }
+        }
+
+        /// <summary>
+        ///     Determines if another instance of the current application is already running.
+        /// </summary>
+        /// <returns>
+        ///     A boolean value that is true if another instance of the application is already running,
+        ///     and false if the current instance is the only one running.
+        /// </returns>
+        /// <remarks>
+        ///     This function uses a named Mutex (a synchronization primitive) to check if it has been
+        ///     created before. If the Mutex is not new, that means another instance of the application
+        ///     is already running.
+        /// </remarks>
+        private static bool IsApplicationAlreadyRunning()
+        {
+            const string mutexName = "Global\\WiresockClientService";
+            Global.AlreadyRunning = new Mutex(true, mutexName, out var createdNew);
+
+            if (createdNew) return false;
+
+            Global.AlreadyRunning.Dispose();
+            return true;
+        }
+
+        /// <summary>
+        ///     Determines whether the current process is running with administrative privileges.
+        /// </summary>
+        public static bool IsCurrentProcessElevated()
+        {
+            using (var identity = WindowsIdentity.GetCurrent())
+            {
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
         }
     }

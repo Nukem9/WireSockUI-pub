@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Security.Principal;
 using System.Threading;
 using System.Windows.Forms;
 using WireSockUI.Config;
@@ -46,34 +44,6 @@ namespace WireSockUI.Forms
         {
             InitializeComponent();
 
-            // Don't try to elevate when running under debugger
-            if (!Debugger.IsAttached)
-                if (!IsCurrentProcessElevated() && !Settings.Default.DisableAutoAdmin)
-                    try
-                    {
-                        var startInfo = new ProcessStartInfo
-                        {
-                            UseShellExecute = true,
-                            WorkingDirectory = Environment.CurrentDirectory,
-                            FileName = Application.ExecutablePath,
-                            Verb = "runas"
-                        };
-                        Process.Start(startInfo);
-                        Environment.Exit(1);
-                    }
-                    catch
-                    {
-                        // If the user refused the elevation, or an error occurred
-                        // MessageBox.Show("Unable to run as administrator. Continuing as normal user.");
-                    }
-
-            if (IsApplicationAlreadyRunning())
-            {
-                MessageBox.Show(Resources.AlreadyRunningMessage, Resources.AlreadyRunningTitle, MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                Environment.Exit(1);
-            }
-
             _tunnelConnectionWorker = InitializeTunnelConnectionWorker();
             _tunnelStateWorker = InitTunnelStateWorker();
 
@@ -108,38 +78,6 @@ namespace WireSockUI.Forms
             // Create a new WireSockManager instance, attached to the logging control
             _wiresock = new WireSockManager(OnWireSockLogMessage);
             _wiresock.LogLevel = _wiresock.LogLevelSetting;
-        }
-
-        private static bool IsCurrentProcessElevated()
-        {
-            using (var identity = WindowsIdentity.GetCurrent())
-            {
-                var principal = new WindowsPrincipal(identity);
-                return principal.IsInRole(WindowsBuiltInRole.Administrator);
-            }
-        }
-
-        /// <summary>
-        ///     Determines if another instance of the current application is already running.
-        /// </summary>
-        /// <returns>
-        ///     A boolean value that is true if another instance of the application is already running,
-        ///     and false if the current instance is the only one running.
-        /// </returns>
-        /// <remarks>
-        ///     This function uses a named Mutex (a synchronization primitive) to check if it has been
-        ///     created before. If the Mutex is not new, that means another instance of the application
-        ///     is already running.
-        /// </remarks>
-        private static bool IsApplicationAlreadyRunning()
-        {
-            const string mutexName = "Global\\WiresockClientService";
-            Global.AlreadyRunning = new Mutex(true, mutexName, out var createdNew);
-
-            if (createdNew) return false;
-
-            Global.AlreadyRunning.Dispose();
-            return true;
         }
 
         /// <summary>
@@ -604,7 +542,7 @@ namespace WireSockUI.Forms
                 UpdateState(ConnectionState.Disconnected, false);
             }
 
-            if (IsCurrentProcessElevated())
+            if (Program.IsCurrentProcessElevated())
                 // Set the tunnel mode based on the application settings.
                 _wiresock.TunnelMode = Settings.Default.UseAdapter
                     ? WireSockManager.Mode.VirtualAdapter
