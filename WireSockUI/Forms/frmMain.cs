@@ -465,23 +465,24 @@ namespace WireSockUI.Forms
             SetWindowVisible(false);
         }
 
-        /// <summary>
-        ///     Handles the form show event.
-        /// </summary>
-        /// <param name="sender">The source of the event.</param>
-        /// <param name="e">An EventArgs that contains the event data.</param>
-        private void OnFormShow(object sender, EventArgs e)
+        private void OnFormResize(object sender, EventArgs e)
+        {
+            SetWindowVisible(WindowState != FormWindowState.Minimized);
+        }
+
+        private void OnTrayIconClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            OnTrayIconManageTunnelsClick(sender, EventArgs.Empty);
+        }
+
+        private void OnTrayIconManageTunnelsClick(object sender, EventArgs e)
         {
             TopMost = true;
             SetWindowVisible(true);
             BringToFront();
             Activate();
             TopMost = false;
-        }
-
-        private void OnFormResize(object sender, EventArgs e)
-        {
-            SetWindowVisible(WindowState != FormWindowState.Minimized);
         }
 
         private void OnNewProfileClick(object sender, EventArgs e)

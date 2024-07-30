@@ -94,7 +94,7 @@ namespace WireSockUI.Forms
             this.trayIcon.ContextMenuStrip = this.mnuContext;
             this.trayIcon.Text = "WireSock: Inactive";
             this.trayIcon.Visible = true;
-            this.trayIcon.DoubleClick += new System.EventHandler(this.OnFormShow);
+            this.trayIcon.MouseClick += new System.Windows.Forms.MouseEventHandler(this.OnTrayIconClick);
             // 
             // mnuContext
             // 
@@ -150,7 +150,7 @@ namespace WireSockUI.Forms
             this.resMenu.SetResourceKey(this.cmiManageTunnels, null);
             this.cmiManageTunnels.Size = new System.Drawing.Size(210, 22);
             this.cmiManageTunnels.Text = "Manage tunnels...";
-            this.cmiManageTunnels.Click += new System.EventHandler(this.OnFormShow);
+            this.cmiManageTunnels.Click += new System.EventHandler(this.OnTrayIconManageTunnelsClick);
             // 
             // cmiOpenTunnel
             // 
