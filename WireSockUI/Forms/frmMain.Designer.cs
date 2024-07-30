@@ -317,7 +317,6 @@ namespace WireSockUI.Forms
             // 
             // lstProfiles
             // 
-            this.lstProfiles.Activation = System.Windows.Forms.ItemActivation.TwoClick;
             this.lstProfiles.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
