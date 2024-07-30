@@ -513,7 +513,7 @@ namespace WireSockUI.Forms
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "WireSock UI";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnFormClosing);
-            this.Resize += new System.EventHandler(this.OnFormMinimize);
+            this.Resize += new System.EventHandler(this.OnFormResize);
             this.mnuContext.ResumeLayout(false);
             this.tabControl.ResumeLayout(false);
             this.tabPageTunnels.ResumeLayout(false);

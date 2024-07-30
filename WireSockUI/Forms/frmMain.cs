@@ -30,6 +30,7 @@ namespace WireSockUI.Forms
 
         private readonly BackgroundWorker _tunnelConnectionWorker;
         private readonly BackgroundWorker _tunnelStateWorker;
+        private int _skipTunnelStateUIUpdates;
 
         /**
          * @brief The manager that handles the Wireguard connections.
@@ -190,15 +191,16 @@ namespace WireSockUI.Forms
 
             worker.DoWork += (s, e) =>
             {
-                while (!worker.CancellationPending)
+                do
                 {
+                    if (_wiresock.Connected && _skipTunnelStateUIUpdates == 0)
+                    {
+                        var stats = _wiresock.GetState();
+                        worker.ReportProgress(0, stats);
+                    }
+
                     Thread.Sleep(1000);
-
-                    if (!_wiresock.Connected) continue;
-
-                    var stats = _wiresock.GetState();
-                    worker.ReportProgress(0, stats);
-                }
+                } while (!worker.CancellationPending);
             };
 
             worker.ProgressChanged += (s, e) =>
@@ -408,16 +410,30 @@ namespace WireSockUI.Forms
             _currentState = state;
         }
 
+        private void SetWindowVisible(bool visible)
+        {
+            Interlocked.Exchange(ref _skipTunnelStateUIUpdates, visible ? 0 : 1);
+
+            if (visible)
+            {
+                Show();
+                if (!ShowInTaskbar) ShowInTaskbar = true;
+                if (WindowState != FormWindowState.Normal) WindowState = FormWindowState.Normal;
+            }
+            else
+            {
+                Hide();
+                if (ShowInTaskbar) ShowInTaskbar = false;
+                if (WindowState != FormWindowState.Minimized) WindowState = FormWindowState.Minimized;
+            }
+        }
+
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
 
             if (Settings.Default.AutoMinimize)
-            {
-                WindowState = FormWindowState.Minimized;
-                ShowInTaskbar = false;
-                Hide();
-            }
+                SetWindowVisible(false);
 
             if (lstProfiles.Items.ContainsKey(Settings.Default.LastProfile))
                 lstProfiles.Items[Settings.Default.LastProfile].Selected = true;
@@ -446,7 +462,7 @@ namespace WireSockUI.Forms
         {
             if (e.CloseReason != CloseReason.UserClosing) return;
             e.Cancel = true;
-            Hide();
+            SetWindowVisible(false);
         }
 
         /// <summary>
@@ -457,17 +473,15 @@ namespace WireSockUI.Forms
         private void OnFormShow(object sender, EventArgs e)
         {
             TopMost = true;
-            Show();
-            WindowState = FormWindowState.Normal;
+            SetWindowVisible(true);
             BringToFront();
             Activate();
             TopMost = false;
         }
 
-        private void OnFormMinimize(object sender, EventArgs e)
+        private void OnFormResize(object sender, EventArgs e)
         {
-            if (WindowState == FormWindowState.Minimized)
-                Hide();
+            SetWindowVisible(WindowState != FormWindowState.Minimized);
         }
 
         private void OnNewProfileClick(object sender, EventArgs e)
